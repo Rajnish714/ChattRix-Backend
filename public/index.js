@@ -5,7 +5,7 @@ let socket;
 
 let currentUser = sessionStorage.getItem("username");
 const currentPage = window.location.pathname;
-const alluserlist=[]
+
   const userslist = document.getElementById("users");
   async function fetchUsers() {
     try {
@@ -17,14 +17,16 @@ const alluserlist=[]
     }
   }
  async function populateUsers() {
-    const users = await fetchUsers();
+   const users = await fetchUsers();
+
     users.forEach((user) => {
-       alluserlist.push(user.username)
+      if (currentUser && user.username === currentUser) return;
+
       const option = document.createElement("option");
       option.value = user._id;
       option.textContent = user.username;
       userslist.appendChild(option);
-    });
+    })
   }
 
 if (currentPage.endsWith("index.html") || currentPage === "/") {
