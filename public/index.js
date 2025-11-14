@@ -1,15 +1,52 @@
 
-const url = "http://localhost:3000/v1/users/";
+const url = "http://localhost:3000/v1/";
 let socket;
 
-
+ const chatList = document.getElementById("chat");
 let currentUser = sessionStorage.getItem("username");
+let receiverid
 const currentPage = window.location.pathname;
 
   const userslist = document.getElementById("users");
+  async function fetchMessage(selectedUser) {
+    try {
+      const res = await fetch(`${url}messages?receiver=${selectedUser}&sender=${currentUser}`);
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
+  }
+
+   async function RemoveMessages() {
+ const items = document.getElementsByTagName("li");
+  
+  while (items.length > 0) {
+    items[0].remove();
+  }
+   }
+ async function populateMessages(selectedUser) {
+   const msgs = await fetchMessage(selectedUser);
+  
+    msgs.forEach((msg) => {
+      console.log(msg.text,"ye hai bhai")
+     const li = document.createElement("li");
+
+     if (currentUser !== msg.sender) {
+    li.classList.add("left");   
+      
+  }
+  else{
+     li.classList.add("right"); 
+  }
+  li.textContent = `${msg.sender}: ${msg.text}`;
+    chatList.appendChild(li )
+    })
+  }
+
   async function fetchUsers() {
     try {
-      const res = await fetch(url);
+      const res = await fetch(`${url}users`);
       const data = await res.json();
       return data;
     } catch (err) {
@@ -60,7 +97,7 @@ if (currentPage.endsWith("index.html") || currentPage === "/") {
 if (currentPage.endsWith("chat.html")) {
   const input = document.getElementById("inputs");
   const button = document.getElementById("send");
-  const chatList = document.getElementById("chat");
+ 
 const name= document.getElementById("name")
 
 
@@ -69,6 +106,7 @@ const name= document.getElementById("name")
   }
 
    populateUsers();
+   
   socket = io();
   socket.on("connect", () => {
     console.log("Connected:", socket.id);
@@ -92,6 +130,8 @@ socket.on("assigned",selected=>{
      socket.on("room",room=>{
      sessionStorage.setItem("room", room);
      })
+     RemoveMessages()
+     populateMessages(selectedUser);
   });
    
 
@@ -106,6 +146,8 @@ socket.on("assigned",selected=>{
     if (msg) {
       socket.emit("chat", {
         senderId: currentUser,
+        receiverid:selectedUser,
+        groupId:null,
         room,
         text: msg,
       });
@@ -116,8 +158,16 @@ socket.on("assigned",selected=>{
 
   socket.on("chat", (msg) => {
     const li = document.createElement("li");
-    li.textContent = `${msg.senderId}: ${msg.text}`;
-    chatList.appendChild(li);
+    
+    if (currentUser !== msg.senderId) {
+    li.classList.add("left");   
+      
+  }
+  else{
+     li.classList.add("right"); 
+  }
+  li.textContent = `${msg.senderId}: ${msg.text}`;
+    chatList.appendChild(li )
   });
 
   socket.on("reconnect", () => {

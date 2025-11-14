@@ -31,9 +31,20 @@ socket.on("assign",selectuser=>{
   
     })
    
-    socket.on("chat",({senderId,room,text})=>{
-     
+    socket.on("chat", async ({senderId,receiverid,groupId,room,text})=>{
+      try{
+      const msg={
+          sender: senderId,
+          receiver:receiverid ,
+          groupId:groupId ,  
+           text: text,
+      }
+       await Message.insertOne(msg)
       io.to(room).emit("chat",{senderId,text})
+    }
+    catch(err){
+      console.log("error in saving msg",err);
+    }
     })
 
 
