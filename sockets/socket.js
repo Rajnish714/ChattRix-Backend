@@ -1,19 +1,21 @@
 import { Message } from "../src/models/message.model.js";
-// import {User} from "../src/models/user.model.js"
+import {User} from "../src/models/user.model.js";
 
 const onlineUser= new Map()
-
 
  async function listen(io){
 
   io.on("connection",socket=>{
     console.log("user Conneted= ",socket.id);
-socket.on("assign",selectuser=>{
-  onlineUser.set(selectuser,socket.id)
-  socket.data.username = selectuser;
-   console.log(`🟢 ${selectuser} connected (${socket.id})`);
+socket.on("assign", async userId=>{
+  onlineUser.set(userId,socket.id)
+  socket.data.userId = userId;
 
-   socket.emit("assigned",  selectuser );
+    const user = await User.findById(userId).select("username");
+  socket.data.username = user.username;
+   console.log(`🟢 ${userId} connected (${socket.id})`);
+
+
     io.emit("online_users", Array.from(onlineUser.keys())); 
     
 })
@@ -22,25 +24,26 @@ socket.on("assign",selectuser=>{
   
 
     socket.on("joinChat",(userId)=>{
-      const room = [socket.data.username, userId].sort().join("_")
+     const  roomId = [socket.data.userId, userId].sort().join("_")
      
    
-      socket.join(room)
-      socket.emit("room",room)
-       console.log(room,"ye hai");
+      socket.join(roomId)
+      socket.data.roomId = roomId;  
+      socket.emit("room",roomId)
+       console.log(roomId,"ye hai");
   
     })
    
-    socket.on("chat", async ({senderId,receiverid,groupId,room,text})=>{
+    socket.on("chat", async ({senderId,receiverid,text})=>{
       try{
       const msg={
           sender: senderId,
           receiver:receiverid ,
-          groupId:groupId ,  
            text: text,
       }
-       await Message.insertOne(msg)
-      io.to(room).emit("chat",{senderId,text})
+       await Message.create(msg);
+       roomId=socket.data.roomId
+      io.to(roomId).emit("chat",{senderId, senderName: socket.data.username,text})
     }
     catch(err){
       console.log("error in saving msg",err);
@@ -52,10 +55,10 @@ socket.on("assign",selectuser=>{
 
 
   socket.on("disconnect",() =>{
-   const username = socket.data.username; // saved earlier
-      if (username && onlineUser.has(username)) {
-        onlineUser.delete(username);
-        console.log(`🔴 ${username} disconnected`);
+   const userId = socket.data.userId; // saved earlier
+      if (userId && onlineUser.has(userId)) {
+        onlineUser.delete(userId);
+        console.log(`🔴 ${userId} disconnected`);
         io.emit("online_users", Array.from(onlineUser.keys()));
       } else {
         console.log(`❌ Unknown socket disconnected: ${socket.id}`);

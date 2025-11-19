@@ -4,58 +4,17 @@ let socket;
 
  const chatList = document.getElementById("chat");
 let currentUser = sessionStorage.getItem("username");
+let userId = sessionStorage.getItem("userId");
 let receiverid
 const currentPage = window.location.pathname;
 
-//---------------signup page--------------------------
-async function signupuser(username,email,password) {
-   try {
-      const res = await fetch(`${url}users/signup`,{
-        method:"POST",
-         headers: {
-        "Content-Type": "application/json"  
-      },
-     body: JSON.stringify({ username,email,password })}
-        );
 
-
-     const data = await res.json(); 
-
-    if (!res.ok) {
-     
-      throw new Error( data.message || "Signup failed");
-    }
-
-    return data; 
-    } catch (err) {
-      console.error("Error in signup user:", err);
-      return err
-    }
-
-}
-
-const signup = document.getElementById("Signup");
-signup.addEventListener("submit",async e=>{
- 
-  e.preventDefault();
-  
- const username= document.getElementById("username").value
- const email= document.getElementById("email").value
- const password= document.getElementById("password").value
-
-const res=await signupuser(username,email,password)
-console.log(res);
-})
-
-
-
-//----------------login page-----------------
 
 // index page--------------------------
   const userslist = document.getElementById("users");
   async function fetchMessage(selectedUser) {
     try {
-      const res = await fetch(`${url}messages?receiver=${selectedUser}&sender=${currentUser}`);
+      const res = await fetch(`${url}messages?receiver=${selectedUser}&sender=${userId}`);
       const data = await res.json();
       return data;
     } catch (err) {
@@ -72,19 +31,19 @@ console.log(res);
    }
  async function populateMessages(selectedUser) {
    const msgs = await fetchMessage(selectedUser);
-  
+ 
     msgs.forEach((msg) => {
       
      const li = document.createElement("li");
 
-     if (currentUser !== msg.sender) {
-    li.classList.add("left");   
+     if (userId !== msg.sender._id) {
+    li.classList.add("right");   
       
   }
   else{
-     li.classList.add("right"); 
+     li.classList.add("left"); 
   }
-  li.textContent = `${msg.sender}: ${msg.text}`;
+  li.textContent = `${msg.sender.username}: ${msg.text}`;
     chatList.appendChild(li )
     })
   }
@@ -102,7 +61,7 @@ console.log(res);
    const users = await fetchUsers();
 
     users.forEach((user) => {
-      if (currentUser && user.username === currentUser) return;
+       if (userId && user._id === userId ) return;
 
       const option = document.createElement("option");
       option.value = user._id;
@@ -115,32 +74,32 @@ console.log(res);
 
   // ----------------------------chat page----------------
 
-if (currentPage.endsWith("index.html") || currentPage === "/") {
+// if (currentPage.endsWith("index.html") || currentPage === "/") {
 
-  const selectBtn = document.getElementById("select");
+//   const selectBtn = document.getElementById("select");
 
  //poupulate user if exists for static index page
  
-  populateUsers();
+//   populateUsers();
 
-  let selectedUser = "";
-  userslist.addEventListener("change", () => {
-    selectedUser = userslist.options[userslist.selectedIndex].text;
+//   let selectedUser = "";
+//   userslist.addEventListener("change", () => {
+//     selectedUser = userslist.options[userslist.selectedIndex].text;
    
-  });
+//   });
 
 
-  selectBtn.addEventListener("click", () => {
-    if (!selectedUser) {
-      alert("Please select a user first!");
-      return;
-    }
+//   selectBtn.addEventListener("click", () => {
+//     if (!selectedUser) {
+//       alert("Please select a user first!");
+//       return;
+//     }
 
-   sessionStorage.setItem("username", selectedUser);
+//    sessionStorage.setItem("username", selectedUser);
 
-    window.location.href = "/chat.html";
-  });
-}
+//     window.location.href = "/chat.html";
+//   });
+// }
 
 
 if (currentPage.endsWith("chat.html")) {
@@ -159,26 +118,21 @@ const name= document.getElementById("name")
   socket = io();
   socket.on("connect", () => {
     console.log("Connected:", socket.id);
-    socket.emit("assign", currentUser);
+    socket.emit("assign", userId);
+     name.textContent=currentUser
   });
-socket.on("assigned",selected=>{
-  currentUser=selected
-  name.textContent=currentUser
-  console.log("you are user:"+ currentUser);
-})
+
   socket.on("online_users", (users) => {
     console.log("🧑‍💻 Online Users:", users);
   });
 
   let selectedUser = "";
   userslist.addEventListener("change", () => {
-    selectedUser = userslist.options[userslist.selectedIndex].text;
+    selectedUser = userslist.options[userslist.selectedIndex].value;
 
     console.log("User selected:", selectedUser);
      socket.emit("joinChat",selectedUser)
-     socket.on("room",room=>{
-     sessionStorage.setItem("room", room);
-     })
+  
      RemoveMessages()
      populateMessages(selectedUser);
   });
@@ -187,17 +141,12 @@ socket.on("assigned",selected=>{
   button.addEventListener("click", () => {
 
     const msg = input.value.trim();
-   let room  = sessionStorage.getItem("room")
-    if (!room) {
-    console.log("room not defined");
-    return;
-  }
+   
+ 
     if (msg) {
       socket.emit("chat", {
-        senderId: currentUser,
+        senderId: userId,
         receiverid:selectedUser,
-        groupId:null,
-        room,
         text: msg,
       });
       input.value = "";
@@ -206,23 +155,24 @@ socket.on("assigned",selected=>{
 
 
   socket.on("chat", (msg) => {
+
     const li = document.createElement("li");
     
-    if (currentUser !== msg.senderId) {
-    li.classList.add("left");   
+    if (userId !== msg.senderId) {
+    li.classList.add("right");   
       
   }
   else{
-     li.classList.add("right"); 
+     li.classList.add("left"); 
   }
-  li.textContent = `${msg.senderId}: ${msg.text}`;
+  li.textContent = `${msg.senderName}: ${msg.text}`;
     chatList.appendChild(li )
   });
 
   socket.on("reconnect", () => {
-  if (currentUser) {
-    socket.emit("assign", currentUser);
-    console.log("Reconnected and reassigned:", currentUser);
+  if (userId) {
+    socket.emit("assign", userId);
+    console.log("Reconnected and reassigned:", userId);
   }
 });
 }
