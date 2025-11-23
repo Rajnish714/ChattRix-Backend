@@ -1,4 +1,4 @@
-const url = "http://localhost:3000/v1/";
+const url = "http://192.168.1.12:3000/v1/";
 
 async function loginuser(email,password) {
    try {
@@ -31,11 +31,14 @@ login.addEventListener("submit",async e=>{
  
   e.preventDefault();
 
- const email= document.getElementById("email").value
- const password= document.getElementById("password").value
+ const email= document.getElementById("email").value.trim()
+ const password= document.getElementById("password").value.trim()
 
 const res=await loginuser(email,password)
-
+  if (!res || !res.user) {
+    alert("Invalid email or password");
+    return;
+  }
    sessionStorage.setItem("userId", res.user._id);
    sessionStorage.setItem("username", res.user.username);
 

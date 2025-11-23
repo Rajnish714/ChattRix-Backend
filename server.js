@@ -1,11 +1,14 @@
 
+import "dotenv/config";
 import app from"./app.js"
 import http from "http"
 import listen from "./sockets/socket.js"
 const server = http.createServer(app)
 import {Server} from "socket.io"
 import { connectDB } from "./src/config/config.js"
-import { loaduser } from "./src/utils/loaduser.js"
+
+
+//import { loaduser } from "./src/utils/loaduser.js"
 
 const PORT=3000
 const io = new Server(server, {

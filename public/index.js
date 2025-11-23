@@ -1,5 +1,5 @@
 
-const url = "http://localhost:3000/v1/";
+const url = "http://192.168.1.12:3000/v1/";
 let socket;
 
  const chatList = document.getElementById("chat");

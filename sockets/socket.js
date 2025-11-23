@@ -42,7 +42,7 @@ socket.on("assign", async userId=>{
            text: text,
       }
        await Message.create(msg);
-       roomId=socket.data.roomId
+      const roomId=socket.data.roomId
       io.to(roomId).emit("chat",{senderId, senderName: socket.data.username,text})
     }
     catch(err){
