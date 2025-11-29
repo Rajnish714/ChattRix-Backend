@@ -1,11 +1,14 @@
 
-const url = "http://192.168.1.12:3000/v1/";
+//const url = "http://192.168.1.12:3000/v1/"
+
+
+
 let socket;
 
  const chatList = document.getElementById("chat");
 let currentUser = sessionStorage.getItem("username");
 let userId = sessionStorage.getItem("userId");
-let receiverid
+
 const currentPage = window.location.pathname;
 
 
@@ -14,9 +17,9 @@ const currentPage = window.location.pathname;
   const userslist = document.getElementById("users");
   async function fetchMessage(selectedUser) {
     try {
-      const res = await fetch(`${url}messages?receiver=${selectedUser}&sender=${userId}`);
-      const data = await res.json();
-      return data;
+      const res = await api.get(`messages?receiver=${selectedUser}`);
+      const data = res
+      return data.data;
     } catch (err) {
       console.error("Error fetching users:", err);
     }
@@ -47,12 +50,28 @@ const currentPage = window.location.pathname;
     chatList.appendChild(li )
     })
   }
-
+async function getCurrentUser(name) {
+    try {
+      const res = await api.get(`auth/me`);
+  
+    sessionStorage.setItem("userId", res.data.user.id);
+     sessionStorage.setItem("username",res.data.user.username)
+     
+      userId = sessionStorage.getItem("userId");
+      currentUser=sessionStorage.getItem("username");
+      
+      
+     return currentUser
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
+}
   async function fetchUsers() {
     try {
-      const res = await fetch(`${url}users`);
-      const data = await res.json();
-      return data;
+      const res = await api.get(`users`);
+      const data = res
+   
+      return data.data;
     } catch (err) {
       console.error("Error fetching users:", err);
     }
@@ -61,6 +80,7 @@ const currentPage = window.location.pathname;
    const users = await fetchUsers();
 
     users.forEach((user) => {
+      console.log(user._id,"ye hai");
        if (userId && user._id === userId ) return;
 
       const option = document.createElement("option");
@@ -74,56 +94,33 @@ const currentPage = window.location.pathname;
 
   // ----------------------------chat page----------------
 
-// if (currentPage.endsWith("index.html") || currentPage === "/") {
-
-//   const selectBtn = document.getElementById("select");
-
- //poupulate user if exists for static index page
- 
-//   populateUsers();
-
-//   let selectedUser = "";
-//   userslist.addEventListener("change", () => {
-//     selectedUser = userslist.options[userslist.selectedIndex].text;
-   
-//   });
-
-
-//   selectBtn.addEventListener("click", () => {
-//     if (!selectedUser) {
-//       alert("Please select a user first!");
-//       return;
-//     }
-
-//    sessionStorage.setItem("username", selectedUser);
-
-//     window.location.href = "/chat.html";
-//   });
-// }
-
-
 if (currentPage.endsWith("chat.html")) {
   const input = document.getElementById("inputs");
   const button = document.getElementById("send");
- 
-const name= document.getElementById("name")
+ const name= document.getElementById("name")
+
 
 
   if (!currentUser) {
-      window.location.href = "/index.html";
-  }
-
+        await getCurrentUser()
+      name.textContent= currentUser
+       
+       }
+  name.textContent=currentUser;
    populateUsers();
-   
-  socket = io();
+    const accessToken=localStorage.getItem("accessToken")
+  
+
+const socket = io("http://localhost:3000", {
+  auth: { token: accessToken }
+});
   socket.on("connect", () => {
     console.log("Connected:", socket.id);
-    socket.emit("assign", userId);
-     name.textContent=currentUser
+     
   });
 
   socket.on("online_users", (users) => {
-    console.log("🧑‍💻 Online Users:", users);
+    console.log("Online Users:", users);
   });
 
   let selectedUser = "";
@@ -145,7 +142,6 @@ const name= document.getElementById("name")
  
     if (msg) {
       socket.emit("chat", {
-        senderId: userId,
         receiverid:selectedUser,
         text: msg,
       });

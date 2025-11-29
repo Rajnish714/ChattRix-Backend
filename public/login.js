@@ -1,12 +1,14 @@
-const url = "http://192.168.1.12:3000/v1/";
+// const url = "http://192.168.1.12:3000/v1/";
+const url ="http://localhost:3000/v1/"
+
 
 async function loginuser(email,password) {
    try {
-      const res = await fetch(`${url}users/login`,{
+      const res = await fetch(`${url}auth/login`,{
         method:"POST",
-         headers: {
+        headers: {
         "Content-Type": "application/json"  
-      },
+      }, credentials: "include",
      body: JSON.stringify({email,password})}
         );
 
@@ -39,7 +41,8 @@ const res=await loginuser(email,password)
     alert("Invalid email or password");
     return;
   }
-   sessionStorage.setItem("userId", res.user._id);
+   localStorage.setItem("accessToken", res.accessToken);
+   sessionStorage.setItem("userId", res.user.id);
    sessionStorage.setItem("username", res.user.username);
 
     window.location.href = "/chat.html";

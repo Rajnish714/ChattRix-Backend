@@ -1,13 +1,37 @@
 import {User} from "../models/user.model.js"
 import bcrypt from 'bcrypt';
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+
 import {generateTokens} from "../services/auth.service.js"
 import {Auth} from "../models/auth.model.js"
+
 const saltRounds = 10;
 
 const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
+
+export async function getCurrentUser(req,res){
+try{
+    const userId= req.user.userId;
+        if (!userId) {
+      return res.status(400).json("user required");
+    }
+    const user = await User.findById(userId)
+    if(!user){
+      return res.status(400).json({message:"user not found"})
+    }
+    res.status(200).json({
+        user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      }
+    })
+
+}catch(error){
+  console.log(error);
+   res.status(500).json({ message: "Internal server error" });
+}}
 
 export async function signup(req,res) {
   try{
@@ -47,13 +71,13 @@ if (!isMatch) return res.status(400).send('Invalid credentials');
 
 const {accessToken,refreshToken}= await generateTokens(user._id)
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path:"/"
-    });
 
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,    
+    sameSite: "lax",
+    path: "/"
+  });
 
   res.json({
       message: "Login successful",
@@ -107,10 +131,10 @@ console.log("TokenData using string:", tokenData);
 
   
     res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
+     httpOnly: true,
+  secure: false,
+  sameSite: "lax",
+  path: "/"
     });
 
     return res.status(200).json({

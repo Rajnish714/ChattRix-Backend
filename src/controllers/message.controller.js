@@ -3,7 +3,9 @@ import { Message } from "../models/message.model.js";
 
 export const getMessages = async(req,res)=>{
 try{
-        const { receiver, sender } = req.query;
+         const sender = req.user.userId;
+        const { receiver } = req.query;
+
 
     if (!receiver || !sender) {
       return res.status(400).json("Both users are required");
