@@ -1,5 +1,6 @@
 import { Message } from "../src/models/message.model.js";
 import {User} from "../src/models/user.model.js";
+import { Chat } from "../src/models/chat.model.js";
 import { socketAuth } from "../src/midlleware/socket.auth.middleware.js";
 
 
@@ -31,27 +32,30 @@ const onlineUser= new Map()
   
   
 
-    socket.on("joinChat",(receiverId)=>{
-     const  roomId = [socket.data.userId, receiverId].sort().join("_")
-     
+    socket.on("joinChat",(chatId)=>{
+        
    
-      socket.join(roomId)
-      socket.data.roomId = roomId;  
-      socket.emit("room",roomId)
-       console.log(roomId,"ye hai");
+      socket.join(chatId)
+      socket.data.chatId = chatId;  
+      socket.emit("chatId",chatId)
+       console.log(`User ${socket.data.userId} joined chat ${chatId}`);
   
     })
    
-    socket.on("chat", async ({receiverid,text})=>{
+    socket.on("chat", async ({chatId,text})=>{
       try{
       const msg={
+           chatId,
           sender: socket.data.userId,
-          receiver:receiverid ,
-           text: text,
+          text: text,
       }
-       await Message.create(msg);
-      const roomId=socket.data.roomId
-      io.to(roomId).emit("chat",{senderId:socket.data.userId, senderName: socket.data.username,text})
+     const message = await Message.create(msg);
+
+         await Chat.findByIdAndUpdate(chatId, {
+          lastMessage: message._id,
+        });
+   
+      io.to(chatId).emit("chat",{_id:message._id,chatId,senderId:socket.data.userId, senderName: socket.data.username,text,createdAt: message.createdAt})
     }
     catch(err){
       console.log("error in saving msg",err);

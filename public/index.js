@@ -8,6 +8,7 @@ let socket;
  const chatList = document.getElementById("chat");
 let currentUser = sessionStorage.getItem("username");
 let userId = sessionStorage.getItem("userId");
+let chatId
 
 const currentPage = window.location.pathname;
 
@@ -15,11 +16,10 @@ const currentPage = window.location.pathname;
 
 // index page--------------------------
   const userslist = document.getElementById("users");
-  async function fetchMessage(selectedUser) {
+  async function fetchMessage(chatId) {
     try {
-      const res = await api.get(`messages?receiver=${selectedUser}`);
-      const data = res
-      return data.data;
+      const res = await api.get(`messages?chatId=${chatId}`);
+      return res.data;
     } catch (err) {
       console.error("Error fetching users:", err);
     }
@@ -32,8 +32,8 @@ const currentPage = window.location.pathname;
     items[0].remove();
   }
    }
- async function populateMessages(selectedUser) {
-   const msgs = await fetchMessage(selectedUser);
+ async function populateMessages(chatId) {
+   const msgs = await fetchMessage(chatId);
  
     msgs.forEach((msg) => {
       
@@ -50,7 +50,7 @@ const currentPage = window.location.pathname;
     chatList.appendChild(li )
     })
   }
-async function getCurrentUser(name) {
+async function getCurrentUser() {
     try {
       const res = await api.get(`auth/me`);
   
@@ -90,7 +90,14 @@ async function getCurrentUser(name) {
     })
   }
 
+async function getorCreatePrivateChatId(selectedUser){
+     const res = await api.post(`chat/private`,{
+  otherUserId: selectedUser,
+});
 
+return res.data._id
+   
+}
 
   // ----------------------------chat page----------------
 
@@ -124,14 +131,15 @@ const socket = io("http://localhost:3000", {
   });
 
   let selectedUser = "";
-  userslist.addEventListener("change", () => {
+  userslist.addEventListener("change", async() => {
     selectedUser = userslist.options[userslist.selectedIndex].value;
 
     console.log("User selected:", selectedUser);
-     socket.emit("joinChat",selectedUser)
+    chatId = await getorCreatePrivateChatId(selectedUser)
+     socket.emit("joinChat",chatId)
   
      RemoveMessages()
-     populateMessages(selectedUser);
+     populateMessages(chatId);
   });
    
 
@@ -142,7 +150,7 @@ const socket = io("http://localhost:3000", {
  
     if (msg) {
       socket.emit("chat", {
-        receiverid:selectedUser,
+        chatId,
         text: msg,
       });
       input.value = "";
@@ -151,7 +159,7 @@ const socket = io("http://localhost:3000", {
 
 
   socket.on("chat", (msg) => {
-
+   
     const li = document.createElement("li");
     
     if (userId !== msg.senderId) {

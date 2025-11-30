@@ -2,21 +2,17 @@ import mongoose from "mongoose";
 
 const messageSchema = new mongoose.Schema(
   {
+     chatId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chat",
+      required: true,
+    },
     sender: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    receiver: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: false,
-    },
-    groupId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-      default: null,
-    },
+   
     text: { type: String, required: true },
     isSeen:{type:Boolean, default:false}
   },
