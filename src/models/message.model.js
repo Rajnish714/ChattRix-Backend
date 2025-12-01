@@ -12,9 +12,16 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-   
+ 
+    deliveredTo: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  ],
+
+  seenBy: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+  ],
     text: { type: String, required: true },
-    isSeen:{type:Boolean, default:false}
+ 
   },
   { timestamps: true }
 );
