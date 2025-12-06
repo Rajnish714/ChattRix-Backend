@@ -11,7 +11,7 @@ import { connectDB } from "./src/config/config.js"
 //import { loaduser } from "./src/utils/loaduser.js"
 
 const PORT=3000
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: "*",
   },
