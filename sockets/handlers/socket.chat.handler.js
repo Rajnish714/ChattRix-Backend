@@ -134,7 +134,7 @@ export async function registerSocketHandlers(io, socket) {
     const userId = socket.data.userId;
 
     if (!userId || !onlineUser.has(userId)) {
-      console.log(`❌ Unknown socket disconnected: ${socket.id}`);
+      console.log(`Unknown socket disconnected: ${socket.id}`);
       return;
     }
 
@@ -143,13 +143,13 @@ export async function registerSocketHandlers(io, socket) {
     const updatedSockets = sockets.filter(id => id !== socket.id);
 
     if (updatedSockets.length === 0) {
-      // No tabs left → user truly offline
+      // No tabs left user truly offline
       onlineUser.delete(userId);
-      console.log(`🔴 ${userId} fully disconnected`);
+      console.log(` ${userId} fully disconnected`);
     } else {
-      // User still has other tabs open → keep online
+      // User still has other tabs open  keep online
       onlineUser.set(userId, updatedSockets);
-      console.log(`🟡 ${userId} closed one tab, still online`);
+      console.log(` ${userId} closed one tab, still online`);
     }
 
     io.emit("online_users", Array.from(onlineUser.keys()));

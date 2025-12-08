@@ -37,22 +37,30 @@ export const createGroup=catchAsync(async (req, res, next) =>{
     if (!groupName) return next(new AppError("Group name is required", 400));
   
    const finalMembers = Array.isArray(members) ? members : [members];
+     const uniqueMembers = [...new Set(
+    finalMembers.filter(id => id && id !== myId)
+  )];
    const newGroup= await Chat.create({
       isGroup:true,
       createdBy:myId,
       admins:[myId],
-      members: [myId, ...finalMembers],
+      members: [myId, ...uniqueMembers],
       groupName,
       groupImage: imageUrl || undefined, 
       
-    });
+    })
+
+      await newGroup.populate([
+    { path: "members", select: "username profilePic" },
+    { path: "admins",  select: "username" }
+  ]);
 
     res.status(201).json({message:"group created successfully",data:newGroup})
     })
 
 //--------------get my group ---------------------------------
 
-export const getMyGroup=catchAsync(async (req, res, next) =>{
+export const getMyGroups=catchAsync(async (req, res, next) =>{
    const myId = req.user.userId;
       
   if(!myId ) return next(new AppError("userId is required", 400));

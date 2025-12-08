@@ -8,8 +8,6 @@ import {Server} from "socket.io"
 import { connectDB } from "./src/config/config.js"
 
 
-//import { loaduser } from "./src/utils/loaduser.js"
-
 const PORT=3000
 export const io = new Server(server, {
   cors: {

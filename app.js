@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import path from "path";
@@ -13,6 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
 app.use(express.json());
 app.use(cors({
    origin: function(origin, callback) {
@@ -27,15 +27,11 @@ app.use(cors({
   },
   credentials: true
 }));
+
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/assets", express.static("public/assets"));
-
 app.use("/v1", api);
-
-
-
 app.use(globalErrorHandler)
-
 
 export default app;

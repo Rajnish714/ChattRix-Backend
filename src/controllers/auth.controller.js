@@ -3,10 +3,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
-
 import { generateTokens } from "../services/auth.service.js";
 import { Auth } from "../models/auth.model.js";
-
 
 const saltRounds = 10;
 
@@ -32,6 +30,7 @@ export const getCurrentUser=catchAsync(async (req, res, next) => {
 
 }
 )
+
 export const signup=catchAsync(async (req, res, next) => {
  
     const { username, email, password } = req.body;
@@ -58,7 +57,7 @@ export const login=catchAsync(async (req, res, next) => {
       return next(new AppError("all field are required", 400));
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).send("Invalid credentials");
 
