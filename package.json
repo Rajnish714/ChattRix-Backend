@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "server.js",
   "type": "module",
-  
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js"
@@ -22,6 +21,9 @@
     "module-alias": "^2.2.3",
     "mongodb": "^6.20.0",
     "mongoose": "^8.19.3",
-    "socket.io": "^4.8.1"
+    "nodemailer": "^7.0.11",
+    "resend": "^6.6.0",
+    "socket.io": "^4.8.1",
+    "zod": "^4.1.13"
   }
 }

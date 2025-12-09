@@ -32,7 +32,6 @@ async function RemoveMessages() {
 
 async function populateMessages(chatId) {
   const data= await fetchMessage(chatId);
-  console.log(data.pagination);
   let msgs=[...data.messages].reverse();
   msgs.forEach((msg) => {
     const li = document.createElement("li");
@@ -69,7 +68,7 @@ async function fetchUsersAndGroups() {
       api.get(`/users`),             
       api.get(`/chat/get-groups`)    
     ]);
-console.log(groupsRes.data?.data,"-------------------")
+
     return {
       users: usersRes.data?.users || usersRes.data,  
       groups: groupsRes.data?.data || groupsRes.data
@@ -79,23 +78,56 @@ console.log(groupsRes.data?.data,"-------------------")
     console.error("Error fetching users/groups:", err);
   }
 }
+// async function populateUsers() {
+//   const result = await fetchUsersAndGroups();
+
+//   const all = [
+//     ...result.users,
+//     ...result.groups    ];
+
+//   all.forEach((item) => {
+//     const option = document.createElement("option");
+//     option.value = item._id;
+
+//     if (item.username) {
+     
+//       option.textContent = item.username;
+//       option.dataset.type = "user";
+//     } else {
+    
+//       option.textContent = item.groupName;
+//       option.dataset.type = "group";
+//     }
+
+//     userslist.appendChild(option);
+//   });
+// }
+
 async function populateUsers() {
   const result = await fetchUsersAndGroups();
 
+  // Add placeholder
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select chat";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  userslist.appendChild(placeholder);
+
+  // Combine users + groups
   const all = [
     ...result.users,
-    ...result.groups    ];
+    ...result.groups
+  ];
 
   all.forEach((item) => {
     const option = document.createElement("option");
     option.value = item._id;
 
     if (item.username) {
-     
       option.textContent = item.username;
       option.dataset.type = "user";
     } else {
-    
       option.textContent = item.groupName;
       option.dataset.type = "group";
     }
@@ -103,28 +135,16 @@ async function populateUsers() {
     userslist.appendChild(option);
   });
 }
-// async function populateUsers() {
-//   const users = await fetchUsersAndGroups();
-
-//   users.forEach((user) => {
-//     if (userId && user._id === userId) return;
-
-//     const option = document.createElement("option");
-//     option.value = user._id;
-//     option.textContent = user.username;
-//     userslist.appendChild(option);
-//   });
-// }
-
 async function getorCreatePrivateChatId(selectedUser) {
   const res = await api.post(`chat/private`, {
     otherUserId: selectedUser,
   });
 
-  return res.data._id;
+  return res.data.chat._id;
 }
 
 // ----------------------------chat page----------------
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (!currentPage.endsWith("chat.html")) return;
 

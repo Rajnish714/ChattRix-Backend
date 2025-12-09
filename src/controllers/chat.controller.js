@@ -22,7 +22,7 @@ export const getorCreatePrivateChatId=catchAsync(async (req, res, next) => {
         members: [myId, otherUserId],
       });
     }
-    res.status(200).json(chat);
+    res.status(200).json({message:"chatId created successfully",chat:chat});
     } 
     )
 

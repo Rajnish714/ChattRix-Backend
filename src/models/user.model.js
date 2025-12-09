@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+
 const userSchema = new mongoose.Schema(
   {
 
@@ -27,6 +28,11 @@ const userSchema = new mongoose.Schema(
      type: String,
      default: "/assets/profile.png"
     },
+    
+    isVerified: {
+      type: Boolean,
+      default:false,
+    }
   },
   { timestamps: true }
 );
