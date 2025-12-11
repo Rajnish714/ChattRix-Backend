@@ -2,7 +2,7 @@
 import nodemailer from "nodemailer";
 
 
-export const sendOtpEmail = async (email, otp) => {
+export const sendOTPEmail= async (email, otp) => {
  
   const transporter = nodemailer.createTransport({
     service: "gmail",
