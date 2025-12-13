@@ -1,45 +1,41 @@
 import { Otp } from "../models/otp.model.js"
-import bcrypt from "bcrypt";
+import { createHash,compareHash } from "../utils/hash.js";
 import { sendOTPEmail } from "../utils/sendOtp.js";
-export async function sendOTP(email,type) {
-  await Otp.deleteMany({ email });
+export async function sendOTP(email,type,signupData = null) {
+  await Otp.deleteMany({ email, type, used: false });
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpHash = await bcrypt.hash(otp, 10);
+  const otpHash = await createHash(otp);
 
   const newRecord = await Otp.create({
     email,
     otpHash,
-    type, 
+    type,
+    ...(signupData && { signupData }),
     expiresAt: Date.now() + 5 * 60 * 1000,
   });
   await sendOTPEmail(email, otp);
   return {  otpSession: newRecord._id.toString() };
 }
 
-export async function verifyOTPService(otp, otpSession) {
+export async function verifyOTPService(otp, otpSessionId) {
+  const session = await Otp.findOne({
+    _id: otpSessionId,
+    used: false,
+    expiresAt: { $gt: new Date() },
+  });
 
-  if (!otp || !otpSession) {
-    return { success: false, message: "Missing OTP or Session" };
+  if (!session) {
+    throw new Error("OTP expired or invalid");
   }
 
-  const record = await Otp.findById(otpSession);
-  if (!record) {
-    return { success: false, message: "OTP session expired" };
+  const isValid = await compareHash(otp, session.otpHash);
+  if (!isValid) {
+    throw new Error("Invalid OTP");
   }
 
-  const email = record.email;
-  if (record.expiresAt < Date.now()) {
-    await Otp.deleteMany({ email });
-    return { success: false, message: "OTP expired" };
-  }
+  session.used = true;
+  await session.save();
 
-  const isMatch = await bcrypt.compare(otp, record.otpHash);
-  if (!isMatch) {
-    return { success: false, message: "Invalid OTP" };
-  }
-
-  await Otp.deleteMany({ email });
-
-  return { success: true, email,type: record.type };
+  return session;
 }

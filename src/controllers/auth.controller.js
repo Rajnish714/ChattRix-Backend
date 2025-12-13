@@ -1,5 +1,4 @@
 import { User } from "../models/user.model.js";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
@@ -7,6 +6,7 @@ import { generateTokens } from "../services/auth.service.js";
 import { Auth } from "../models/auth.model.js";
 import { Otp } from "../models/otp.model.js";
 import { sendOTP,verifyOTPService } from "../services/otp.services.js";
+import { createHash,compareHash } from "../utils/hash.js";
 
 
 const saltRounds = 10;
@@ -24,6 +24,7 @@ export const getCurrentUser=catchAsync(async (req, res, next) => {
       return next(new AppError("user not found", 404));
     }
     res.json({
+      message:"user fetched successfully",
       user: {
         id: user._id,
         username: user.username,
@@ -43,86 +44,116 @@ export const signup=catchAsync(async (req, res, next) => {
    const existing = await User.findOne({ email });
    if (existing) return next(new AppError("Email already registered", 400));
   
-    const {otpSession}= await sendOTP(email,"register")
+    const passwordHash = await createHash(password)
+    
+    const {otpSession}= await sendOTP(email,"register",{
+    username,
+    passwordHash,
+  })
 
     res.json({
     message: "OTP sent to your email",
-    signupData: { username, email , otpSession},
+    otpSession,
   });
 
 })
-
 export const verifyOTP = catchAsync(async (req, res, next) => {
-  const { otp, username, password, otpSession } = req.body;
-  
-  const result = await verifyOTPService(otp, otpSession);
+  const { otp, otpSession } = req.body;
 
-   if (!result.success) {
-    return next(new AppError(result.message, 400));
+  if (!otp || !otpSession) {
+    return next(new AppError("OTP and session required", 400));
   }
- const { email, type } = result;
-  let responsePayload={}
 
-if(type==="register"){
- if( !username || !password ){ return next(new AppError("username password required", 400));}
-   const hashedPassword = await bcrypt.hash(password, saltRounds);
-    const user = await User.create({
+  const result = await verifyOTPService(otp, otpSession);
+ 
+
+  const { email, type, signupData } = result;
+
+   if (type !== "register") {
+    return next(new AppError("Invalid OTP type", 400));
+  }
+
+  const { username, passwordHash } = signupData;
+
+  const user = await User.create({
+    email,
     username,
-    email,       
-    password: hashedPassword,
+    password: passwordHash,
     isVerified: true,
   });
 
-     responsePayload = {
-      message: "Signup successful",
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-      },
-    };
-   await Otp.deleteMany({ email });
-  res.json(responsePayload);
-}
-if(type==="forgot"){
-  if(!password)return next( new AppError("password required"))
-  const user = await User.findOne({ email }).select("+password");
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (isMatch) return next(new AppError("New password cannot be the same as the old password. ",400))
+  res.json({
+    message: "Signup successful",
+    user: {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+    },
+  });
+});
 
-    const hashedPassword = await bcrypt.hash(password, 10);
 
-   await User.findByIdAndUpdate(user._id,
-    {password:hashedPassword},
-    {new:true})
-
-    responsePayload={
-      message:"password updated successfully",
-
-    }
-    await Otp.deleteMany({ email });
-    res.json(responsePayload);
-}
-
-})
 
 export const resendOtp = catchAsync(async (req, res, next) => {
+  const { otpSession } = req.body;
+  if (!otpSession) return next(new AppError("OTP session required", 400));
 
-    const { otpSession } = req.body;
- 
-    if(!otpSession)  return next(new AppError("OTP session required", 400));
-    const record = await Otp.findById(otpSession);
-  
-    if (!record) return next(new AppError("Invalid OTP session", 400));
-    const {email,type} = record
-  
-  const {otpSession: newSession}= await sendOTP(email,type)
+  const record = await Otp.findById(otpSession);
+  if (!record || record.used) {
+    return next(new AppError("OTP session invalid or expired", 400));
+  }
 
-   res.json({
+  const { email, type, signupData } = record;
+
+   record.used = true;
+  await record.save();
+
+  const {otpSession:newSession} = await sendOTP(email, type, signupData);
+
+  res.json({
     message: "OTP resent successfully",
     otpSession: newSession,
-   });
+  });
 });
+
+export const forgetPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new AppError("Email required", 400));
+
+  const user = await User.findOne({ email });
+  if (!user) return next(new AppError("User not found", 404));
+
+  const {otpSession} = await sendOTP(email, "forgot");
+
+  res.json({
+    message: "OTP sent",
+    otpSession,
+  });
+});
+
+export const resetPassword = catchAsync(async (req, res, next) => {
+  const { otp, otpSession, newPassword } = req.body;
+
+  if (!otp || !otpSession || !newPassword) {
+    return next(new AppError("All fields required", 400));
+  }
+
+  const result = await verifyOTPService(otp, otpSession);
+  
+  if ( result.type !== "forgot") {
+    return next(new AppError("Invalid OTP", 400));
+  }
+
+  const passwordHash = await createHash(newPassword)
+
+  await User.updateOne(
+    { email: result.email },
+    { password: passwordHash }
+  );
+
+  res.json({ message: "Password updated successfully" });
+});
+
 
 
 export const login=catchAsync(async (req, res, next) => {
@@ -135,7 +166,7 @@ export const login=catchAsync(async (req, res, next) => {
     const user = await User.findOne({ email }).select("+password");
      if (!user) return next(new AppError("Invalid credentials", 401))
 
-    const isMatchPassword = await bcrypt.compare(password, user.password);
+    const isMatchPassword = await compareHash(password,user.password) 
     if (!isMatchPassword) return next(new AppError("Invalid credentials", 401))
 
     const { accessToken, refreshToken } = await generateTokens(user._id);
@@ -159,25 +190,15 @@ export const login=catchAsync(async (req, res, next) => {
  
 })
 
-export const forgetPassword=catchAsync(async (req,res,next)=>{
-  const {email} = req.body
-  if(!email) return next(new AppError("email required",401))
-  const user=await User.findOne({email})
-  if(!user) return next(new AppError("user not found",401))
-  const {otpSession}= await sendOTP(email,"forgot")
-  res.status(200).json({
-  message:"forgot request has been sent",
-  otpSession
-})
 
-})
+
 
 export const refreshToken=catchAsync(async (req, res, next) => {
   
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-      return next(new AppError("all field are required", 401));
+      return next(new AppError("Refresh token required", 401));
     }
     let decoded;
     try {
@@ -192,10 +213,7 @@ export const refreshToken=catchAsync(async (req, res, next) => {
       return next(new AppError("Refresh token not found", 403));
     }
 
-    const isValidRT = await bcrypt.compare(
-      refreshToken,
-      tokenData.refreshTokenHash
-    );
+    const isValidRT = await compareHash( refreshToken, tokenData.refreshTokenHash) 
     if (!isValidRT) {
       return next(new AppError("Refresh token mismatch", 403));
     }

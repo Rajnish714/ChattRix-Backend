@@ -8,7 +8,7 @@ import {Server} from "socket.io"
 import { connectDB } from "./src/config/config.js"
 
 
-const PORT=3000
+const PORT=process.env.PORT
 export const io = new Server(server, {
   cors: {
     origin: "*",

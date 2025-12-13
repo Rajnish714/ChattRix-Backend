@@ -1,4 +1,4 @@
-const url = "http://localhost:3000/v1/";
+const url = "http://localhost:4000/v1/";
 
 async function signupuser(username,email,password) {
    try {

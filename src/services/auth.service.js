@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import { createHash} from "../utils/hash.js";
 import {Auth} from "../models/auth.model.js";
 
 const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET;
@@ -9,9 +9,7 @@ export const generateTokens = async (userId) => {
  
   const accessToken = jwt.sign({ userId: userId.toString() }, ACCESS_SECRET, { expiresIn: "15m" });
   const refreshToken = jwt.sign({ userId: userId.toString() }, REFRESH_SECRET, { expiresIn: "7d" });
-
-
-  const hashedRT = await bcrypt.hash(refreshToken, 10);
+  const hashedRT = await createHash(refreshToken);
 
   await Auth.findOneAndUpdate(
     { userId },

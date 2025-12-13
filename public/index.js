@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const accessToken = localStorage.getItem("accessToken");
 
-  socket = io("http://localhost:3000", {
+  socket = io("http://localhost:4000", {
     auth: { token: accessToken },
   });
 
