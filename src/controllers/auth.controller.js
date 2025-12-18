@@ -8,10 +8,8 @@ import { Otp } from "../models/otp.model.js";
 import { sendOTP,verifyOTPService } from "../services/otp.services.js";
 import { createHash,compareHash } from "../utils/hash.js";
 
-
-const saltRounds = 10;
-
 const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const  isProd = process.env.NODE_ENV === "production";
 
 export const getCurrentUser=catchAsync(async (req, res, next) => {
   
@@ -163,7 +161,7 @@ export const login=catchAsync(async (req, res, next) => {
     if (!email || !password) {
       return next(new AppError("all field are required", 400));
     }
-console.log(email,password);
+
     const user = await User.findOne({ email }).select("+password");
      if (!user) return next(new AppError("Invalid credentials email", 401))
 
@@ -174,8 +172,8 @@ console.log(email,password);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
@@ -225,10 +223,11 @@ export const refreshToken=catchAsync(async (req, res, next) => {
     );
 
     res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+        httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
 
     return res.status(200).json({
@@ -255,10 +254,10 @@ export const logout=catchAsync(async (req, res, next) =>{
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
-    });
+      });
     res.json({ message: "Logged out successfully" });
 
 }
