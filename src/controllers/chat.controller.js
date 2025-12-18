@@ -1,7 +1,8 @@
 import { Chat } from "../models/chat.model.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
-import { io } from "../../server.js";
+
+import { getIO } from "../../sockets/sockets.js";
 
 
 export const getorCreatePrivateChatId=catchAsync(async (req, res, next) => {
@@ -108,7 +109,7 @@ export const getMyGroups=catchAsync(async (req, res, next) =>{
 //--------------Add group member---------------------------------
 
 export const addGroupMember=catchAsync(async (req, res, next) =>{
-    
+    const io= getIO()
     const { chatId } = req.query;
     const myId = req.user.userId;
     const {  members } = req.body;
@@ -135,7 +136,7 @@ export const addGroupMember=catchAsync(async (req, res, next) =>{
 //--------------Remove group member---------------------------------
 
 export const removeGroupMember = catchAsync(async (req, res, next) => {
-
+const io= getIO()
     const { chatId } = req.query;
     const myId = req.user.userId;
     const { members } = req.body;
@@ -252,7 +253,7 @@ export const addGroupAdmin=catchAsync(async (req, res, next) =>{
    //--------------remove group admin---------------------------------
 
 export const removeGroupAdmin=catchAsync(async (req, res, next) =>{
-    
+    const io= getIO()
     const { chatId } = req.query;
     const myId = req.user.userId;
     const {  members } = req.body;

@@ -163,12 +163,12 @@ export const login=catchAsync(async (req, res, next) => {
     if (!email || !password) {
       return next(new AppError("all field are required", 400));
     }
-
+console.log(email,password);
     const user = await User.findOne({ email }).select("+password");
-     if (!user) return next(new AppError("Invalid credentials", 401))
+     if (!user) return next(new AppError("Invalid credentials email", 401))
 
     const isMatchPassword = await compareHash(password,user.password) 
-    if (!isMatchPassword) return next(new AppError("Invalid credentials", 401))
+    if (!isMatchPassword) return next(new AppError("Invalid credentials password", 401))
 
     const { accessToken, refreshToken } = await generateTokens(user._id);
 
