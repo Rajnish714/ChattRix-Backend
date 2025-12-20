@@ -14,11 +14,11 @@ const messageSchema = new mongoose.Schema(
     },
  
     deliveredTo: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+    { type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }
     ],
 
    seenBy: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+    { type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }
    ],
 
     text: { type: String, required: true },

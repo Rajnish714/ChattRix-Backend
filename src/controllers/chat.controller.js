@@ -4,33 +4,38 @@ import AppError from "../utils/AppError.js";
 
 import { getIO } from "../../sockets/sockets.js";
 
+export const getorCreatePrivateChatId = catchAsync(async (req, res, next) => {
+  const io = getIO();
+  const { otherUserId } = req.body;
+  const myId = req.user.userId;
 
-export const getorCreatePrivateChatId=catchAsync(async (req, res, next) => {
-   
-    const {otherUserId}= req.body
-    const myId = req.user.userId;
+  if (!otherUserId) return next(new AppError("otherUserId is required", 400));
 
-    if(!otherUserId) return next(new AppError("otherUserId is required", 400));
-    
-     let chat = await Chat.findOne({
+  let chat = await Chat.findOne({
+    isGroup: false,
+    members: { $all: [myId, otherUserId] },
+  }).populate("members", "username profilePic");
+
+  if (!chat) {
+    chat = await Chat.create({
       isGroup: false,
-      members: { $all: [myId, otherUserId] },
+      members: [myId, otherUserId],
     });
 
-    if(!chat) {
-      chat = await Chat.create({
-        isGroup: false,
-        members: [myId, otherUserId],
-      });
-    }
-    res.status(200).json({message:"chatId created successfully",chat:chat});
-    } 
-    )
+    chat = await Chat.findById(chat._id).populate("members", "username profilePic");
+
+    
+    io.to([otherUserId, myId]).emit("new_chat", chat);
+  
+  }
+
+  res.status(200).json({ message: "chatId created successfully", chat: chat });
+});
 
 //--------------CREATE GROUP---------------------------------4
   
 export const createGroup=catchAsync(async (req, res, next) =>{
-
+const io = getIO();
    const myId = req.user.userId;
    const { imageUrl,groupName,members } = req.body;
    
@@ -56,6 +61,12 @@ export const createGroup=catchAsync(async (req, res, next) =>{
     { path: "admins",  select: "username" }
   ]);
 
+   newGroup.members.forEach((member) => {
+    io.to(member._id.toString()).emit("group_created", 
+     
+       newGroup,
+    );
+  });
     res.status(201).json({message:"group created successfully",data:newGroup})
     })
 

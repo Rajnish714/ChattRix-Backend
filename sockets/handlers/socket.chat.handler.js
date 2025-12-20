@@ -11,7 +11,7 @@ export async function registerSocketHandlers(io, socket) {
   //fetch username and check user for gloabal use
   const user = await User.findById(userId).select("username");
   if (!user) return socket.disconnect();
-
+  socket.join(userId);    
   await autoJoinUserChats(socket, userId);
 
   //set online users for online status
@@ -57,14 +57,24 @@ socket.on("leaveChat", (chatId) => {
         lastMessage: message._id,
       });
 
-      io.to(chatId).emit("chat", {
-        _id: message._id,
-        chatId,
-        sender: {_id:socket.data.userId,
-          username:socket.data.username},
-        text,
-        createdAt: message.createdAt
-      });
+      const payload = {
+      _id: message._id,
+      chatId,
+      sender: {
+        _id: socket.data.userId,
+        username: socket.data.username,
+      },
+      text,
+      deliveredTo: [],
+      seenBy: [],
+      messageType: message.messageType,
+      mediaUrl: message.mediaUrl,
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+    };
+      io.to(chatId).emit("chat", payload)
+
+ 
 
     } catch (error) {
       console.log("error in saving msg", error);
@@ -72,69 +82,57 @@ socket.on("leaveChat", (chatId) => {
   });
 
   //messageDeliver status from receiver, receiver emit the event to update msg delivery
-  socket.on("messageDelivered", async ({ messageId }) => {
-    try {
-      const userId = socket.data.userId;
+socket.on("messageDelivered", async ({ messageId }) => {
+  const userId = socket.data.userId;
 
-      await Message.updateOne(
-        { _id: messageId },
-        { $addToSet: { deliveredTo: userId } }
-      );
+  const msg = await Message.findById(messageId).select("sender chatId");
+  if (!msg) return;
 
-      const msg = await Message.findById(messageId).select("sender");
-      const senderId = msg.sender.toString();
-      const senderSocket = onlineUser.get(senderId);
+  
+  if (msg.sender.toString() === userId) return;
 
-      if (senderSocket) {
-        io.to(senderSocket).emit("messageDeliveredUpdate", {
-          messageId,
-          deliveredTo: socket.data.username
-        });
+  await Message.updateOne(
+    { _id: messageId },
+    { $addToSet: { deliveredTo: userId } }
+  );
+const chatId = msg.chatId.toString();
+ io.to(chatId).emit("messageDeliveredUpdate", {
+     chatId,
+      messageId,
+      userId,
+    });
+  
+});
+
+
+ 
+  socket.on("messageSeen", async ({ messageId }) => {
+  try {
+    const userId = socket.data.userId;
+
+    const message = await Message.findById(messageId);
+    if (!message) return;
+
+    if (message.sender.toString() === userId) return;
+
+    await Message.updateOne(
+      { _id: messageId, seenBy: { $ne: userId } },
+      { $addToSet: { seenBy: userId } }
+    );
+
+    socket.to(message.chatId.toString()).emit("messagesSeenUpdate", {
+      messageId,
+      viewer: {
+        id: userId,
+        username: socket.data.username
       }
+    });
 
-    } catch (error) {
-      console.log("error in Deliver message", error);
-    }
-  });
+  } catch (err) {
+    console.error("Error updating seen messages:", err);
+  }
+});
 
-  //msgSeen emit by receiver
-  socket.on("messageSeen", async (chatId) => {
-    try {
-      const userId = socket.data.userId;
-
-      //mongodb logic this logic prevent duplicate data in SeenBy array
-      await Message.updateMany(
-        { chatId, seenBy: { $ne: userId } }, //ne means not equal condition
-        { $addToSet: { seenBy: userId } }   //addtoset prevents duplicates
-      );
-
-      //get all unique senderId in this msg collection by chatId
-      const senders = await Message.distinct("sender", { chatId });
-
-      //convert senderId to string run loop for fetch all socketid
-      senders.forEach((senderId) => {
-        senderId = senderId.toString();
-
-        if (senderId === userId) return;
-
-        const senderSocket = onlineUser.get(senderId);
-
-        //send to specify user 
-        if (senderSocket) {
-          io.to(senderSocket).emit("messagesSeenUpdate", {
-            chatId,
-            viewer: {
-              id: userId,
-              username: socket.data.username
-            }
-          });
-        }
-      });
-
-    } catch (err) {
-      console.error("Error updating seen messages:", err);
-    }
-  });
 
   socket.on("disconnect", () => {
     const userId = socket.data.userId;
