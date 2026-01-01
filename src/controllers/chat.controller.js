@@ -1,7 +1,7 @@
 import { Chat } from "../models/chat.model.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
-
+import { uploadImage } from "../services/upload.service.js";
 import { getIO } from "../../sockets/sockets.js";
 
 export const getorCreatePrivateChatId = catchAsync(async (req, res, next) => {
@@ -37,22 +37,41 @@ export const getorCreatePrivateChatId = catchAsync(async (req, res, next) => {
 export const createGroup=catchAsync(async (req, res, next) =>{
 const io = getIO();
    const myId = req.user.userId;
-   const { imageUrl,groupName,members } = req.body;
+   const { groupName, members } = req.body;
    
     if(!myId ) return next(new AppError("userId is required", 400));
     if (!groupName) return next(new AppError("Group name is required", 400));
-  
-   const finalMembers = Array.isArray(members) ? members : [members];
-     const uniqueMembers = [...new Set(
-    finalMembers.filter(id => id && id !== myId)
-  )];
+    if (!members) {
+    return next(new AppError("Members are required", 400));
+  }
+
+    let parsedMembers;
+  try {
+    parsedMembers = JSON.parse(members);
+  } catch (err) {
+    return next(new AppError("Invalid members format", 400));
+  }
+
+    const uniqueMembers = [
+    ...new Set(parsedMembers.filter((id) => id && id !== myId)),
+  ];
+
+
+    let groupImage;
+ 
+    if (req.file) {
+    groupImage = await uploadImage({
+      file: req.file,
+      folder: "chattrix/groups",
+    });
+  }
    const newGroup= await Chat.create({
       isGroup:true,
       createdBy:myId,
       admins:[myId],
       members: [myId, ...uniqueMembers],
       groupName,
-      groupImage: imageUrl || undefined, 
+      groupImage
       
     })
 

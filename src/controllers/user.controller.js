@@ -59,3 +59,33 @@ export const searchUsers=catchAsync(async(req,res,next)=>{
     pagination: result.pagination,
   });
  })
+
+ export const updateMyProfile = catchAsync(async (req, res, next) => {
+  const userId = req.user.userId;
+  const updates = {};
+
+
+  if (req.body.username) {
+    updates.username = req.body.username;
+  }
+
+
+  if (req.file) {
+    updates.profilePic = await uploadImage({
+      file: req.file,
+      folder: "chattrix/users",
+    });
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return next(new AppError("Nothing to update", 400));
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    updates,
+    { new: true }
+  ).select("username profilePic");
+
+  res.json({ data: user });
+});
